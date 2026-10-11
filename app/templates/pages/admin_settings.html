@@ -1,0 +1,90 @@
+{% extends "admin_base.html" %}
+{% set admin_title = 'Pengaturan' %}
+{% set admin_description = 'Kelola informasi administrasi situs dan periksa konfigurasi yang tersimpan.' %}
+{% block title %}Pengaturan | Raja Voting Digital{% endblock %}
+{% block admin_content %}
+<div id="loading-state" class="rv-state" role="status">Memuat pengaturan...</div>
+<div id="error-state" class="notice notice-error hidden" role="alert"><p id="error-message"></p><button type="button" class="btn btn-secondary" onclick="loadSettings()">Coba lagi</button></div>
+<div id="settings-content" class="hidden space-y-6">
+  <section class="admin-settings-section">
+    <div class="admin-settings-heading">
+    <h2 class="rv-section-title">Informasi situs</h2>
+    <p>Nama situs dan kontak panitia yang disimpan untuk administrasi event.</p>
+    </div>
+    <form id="settings-form" class="space-y-4">
+      <div class="field"><label for="setting-site-name">Nama situs</label><input id="setting-site-name" maxlength="200" required></div>
+      <div class="field"><label for="setting-admin-email">Email panitia</label><input id="setting-admin-email" type="email" autocomplete="email"></div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="field"><label for="setting-timezone">Zona waktu</label><input id="setting-timezone" placeholder="Asia/Jakarta" required></div>
+        <div class="field"><label for="setting-currency">Mata uang</label><input id="setting-currency" maxlength="3" pattern="[A-Z]{3}" placeholder="IDR" required></div>
+      </div>
+      <p id="general-feedback" role="status" class="admin-feedback hidden"></p>
+      <button class="btn btn-primary" type="submit">Simpan informasi</button>
+    </form>
+  </section>
+  <section class="admin-settings-section">
+    <div class="admin-settings-heading">
+    <h2 class="rv-section-title">Konfigurasi tersimpan</h2>
+    <p>Nilai di bagian ini tersimpan sebagai catatan. Mode pemeliharaan, Cloudflare, antrean, dan interval pembaruan belum mengubah perilaku aplikasi.</p>
+    </div>
+    <form id="system-settings-form" class="space-y-4">
+      <label class="flex items-center gap-3"><input type="checkbox" id="setting-maintenance"> Catatan mode pemeliharaan</label>
+      <label class="flex items-center gap-3"><input type="checkbox" id="setting-cloudflare"> Catatan proteksi Cloudflare</label>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="field"><label for="setting-queue-limit">Batas antrean</label><input id="setting-queue-limit" type="number" min="0" step="1" required></div>
+        <div class="field"><label for="setting-leaderboard-refresh">Interval peringkat (detik)</label><input id="setting-leaderboard-refresh" type="number" min="1" step="1" required></div>
+      </div>
+      <p id="system-feedback" role="status" class="admin-feedback hidden"></p>
+      <button class="btn btn-primary" type="submit">Simpan konfigurasi</button>
+    </form>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const general = {site_name:'setting-site-name', admin_email:'setting-admin-email', timezone:'setting-timezone', currency:'setting-currency'};
+  const system = {maintenance_mode:'setting-maintenance', cloudflare_enabled:'setting-cloudflare', queue_limit:'setting-queue-limit', leaderboard_refresh:'setting-leaderboard-refresh'};
+  async function api(path, options = {}) {
+    const response = await fetch('/api/v1/admin/settings' + path, {...options, headers:{'Content-Type':'application/json', Authorization:'Bearer ' + (localStorage.getItem('wvc_admin_token') || '')}});
+    if (response.status === 401 || response.status === 403) { localStorage.removeItem('wvc_admin_token'); location.assign('/admin/login'); throw new Error('Silakan masuk kembali.'); }
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.message || 'Pengaturan belum dapat disimpan.');
+    return data.data;
+  }
+  window.loadSettings = async () => {
+    document.getElementById('error-state').classList.add('hidden');
+    document.getElementById('loading-state').classList.remove('hidden');
+    try {
+      const data = await api('');
+      Object.entries({...general,...system}).forEach(([key,id]) => {
+        const input = document.getElementById(id);
+        if (input.type === 'checkbox') input.checked = data[key] === 'true';
+        else input.value = data[key] || '';
+      });
+      document.getElementById('settings-content').classList.remove('hidden');
+    } catch (error) {
+      document.getElementById('error-message').textContent = error.message;
+      document.getElementById('error-state').classList.remove('hidden');
+    } finally { document.getElementById('loading-state').classList.add('hidden'); }
+  };
+  for (const [formId,fields,path,feedbackId] of [['settings-form',general,'','general-feedback'],['system-settings-form',system,'/system','system-feedback']]) {
+    document.getElementById(formId).addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = event.target.querySelector('button[type=submit]');
+      const feedback = document.getElementById(feedbackId);
+      const payload = {};
+      Object.entries(fields).forEach(([key,id]) => { const input = document.getElementById(id); payload[key] = input.type === 'checkbox' ? String(input.checked) : input.value.trim(); });
+      button.disabled = true;
+      feedback.textContent = 'Menyimpan...';
+      feedback.classList.remove('hidden');
+      feedback.dataset.error = 'false';
+      try { await api(path,{method:'PUT',body:JSON.stringify(payload)}); feedback.textContent = 'Perubahan tersimpan.'; }
+      catch (error) { feedback.textContent = error.message; feedback.dataset.error = 'true'; }
+      finally { button.disabled = false; }
+    });
+  }
+  loadSettings();
+})();
+</script>
+{% endblock %}

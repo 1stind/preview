@@ -1,0 +1,12 @@
+{% extends "admin_base.html" %}
+{% set admin_title = 'Catatan proyek' %}
+{% set admin_description = 'Informasi tentang catatan pengembangan dan sumber data operasional.' %}
+{% block title %}Catatan proyek | Raja Voting Digital{% endblock %}
+{% block admin_content %}
+<section class="admin-note">
+  <h2>Catatan pengembangan belum tersedia</h2>
+  <p>Daftar kerja sebelumnya dicatat secara manual dan belum terhubung ke status aplikasi. Halaman ini tidak menampilkan persentase penyelesaian.</p>
+  <p class="mt-4">Gunakan data operasional berikut untuk memantau event.</p>
+  <div class="admin-note-links"><a href="/admin"><span><strong>Ringkasan event</strong><small>Suara, peserta, dan status pembayaran.</small></span><span aria-hidden="true">›</span></a><a href="/admin/leaderboard"><span><strong>Peringkat peserta</strong><small>Perolehan suara pada event yang dipantau.</small></span><span aria-hidden="true">›</span></a><a href="/admin/audit-logs"><span><strong>Log aktivitas</strong><small>Tindakan yang tercatat di aplikasi.</small></span><span aria-hidden="true">›</span></a></div>
+</section>
+{% endblock %}

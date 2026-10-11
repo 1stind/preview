@@ -1,0 +1,72 @@
+{% extends "public_base.html" %}
+{% from "macros/public.html" import icon %}
+{% block title %}Login Admin — Raja Voting Digital{% endblock %}
+{% block body_class %}public-site admin-login-page{% endblock %}
+{% block head %}{{ super() }}<link rel="stylesheet" href="/static/css/admin.css?v={{ tailwind_css_version | default("preview", true) }}">{% endblock %}
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="admin-login-layout">
+  <section class="login-story">
+    <a href="/" class="wordmark"><img class="brand-logo" src="/static/images/raja-voting-logo.png?v={{ tailwind_css_version | default("preview", true) }}" width="56" height="56" alt="Logo Raja Voting Digital"><span>raja<span class="brand-light">voting</span><small>DIGITAL VOTING PLATFORM</small></span></a>
+    <div class="login-story-copy"><span class="eyebrow">BEHIND EVERY GREAT MOMENT</span><h1>Kelola panggungnya.<br><em>Rayakan potensinya.</em></h1><p>Satu ruang untuk mengelola kompetisi, merawat kepercayaan, dan memberi tempat bagi setiap talenta.</p></div>
+    {% include "partials/trophy_art.html" %}
+    <div class="login-story-footer"><span>{{ icon('spark') }} SETIAP DUKUNGAN BERARTI</span><small>RAJA VOTING DIGITAL</small></div>
+  </section>
+  <section class="login-form-panel">
+    <a href="/" class="login-back">← Kembali ke situs</a>
+    <div class="login-form-wrap">
+      <span class="login-lock">{{ icon('shield') }}</span>
+      <span class="eyebrow">ORGANIZER WORKSPACE</span>
+      <h2>Selamat <em>datang kembali.</em></h2>
+      <p>Masuk untuk mengelola event dan dukungan yang berarti.</p>
+      <form x-data="adminLogin()" @submit.prevent="submit()" class="admin-login-form" :aria-busy="loading">
+        <p x-show="error" x-cloak class="login-error" role="alert" x-text="error"></p>
+        <div><label for="email">Alamat email</label><input id="email" type="email" x-model="email" required autocomplete="username" placeholder="nama@organisasi.id"></div>
+        <div><label for="password">Kata sandi</label><div class="password-field"><input id="password" :type="showPassword ? 'text' : 'password'" type="password" x-model="password" required autocomplete="current-password" placeholder="Masukkan kata sandi"><button type="button" @click="showPassword = !showPassword" :aria-label="showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'" :aria-pressed="showPassword">{{ icon('eye') }}</button></div></div>
+        <button type="submit" :disabled="loading" class="button button-dark login-submit"><span x-text="loading ? 'Memproses…' : 'Masuk ke Workspace'"></span>{{ icon('arrow') }}</button>
+      </form>
+      <div class="login-help">{{ icon('shield') }}<p>Akses khusus pengelola yang terdaftar.<br>Hubungi pengelola platform jika membutuhkan akses.</p></div>
+    </div>
+    <footer class="login-form-footer"><span>© 2026 Raja Voting Digital</span><span>Organizer Portal</span></footer>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function adminLogin() {
+  return {
+    email: '',
+    password: '',
+    loading: false,
+    error: '',
+    showPassword: false,
+    async submit() {
+      this.loading = true;
+      this.error = '';
+      try {
+        const res = await fetch('/api/v1/auth/admin/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: this.email, password: this.password }),
+        });
+        const body = await res.json();
+        if (!res.ok || !body.success) {
+          this.error = body.message || 'Login gagal';
+          return;
+        }
+        const token = body.data.access_token;
+        localStorage.setItem('wvc_admin_token', token);
+        window.location.href = '/admin';
+      } catch (e) {
+        this.error = 'Terjadi kesalahan jaringan. Silakan coba lagi.';
+      } finally {
+        this.loading = false;
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

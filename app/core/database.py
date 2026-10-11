@@ -1,0 +1,73 @@
+"""
+Database session management (SQLAlchemy 2.0 async).
+
+Production: PostgreSQL via asyncpg (DATABASE_URL=postgresql+asyncpg://...).
+Dev/test fallback: SQLite via aiosqlite (DATABASE_URL=sqlite+aiosqlite:///...).
+All repositories depend on app.core.database.get_db — never import the
+engine directly in business code.
+
+Schema is managed exclusively by Alembic migrations. No create_all().
+"""
+from collections.abc import AsyncGenerator
+import logging
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
+
+from app.core.config import settings
+
+
+class Base(DeclarativeBase):
+    """Declarative base for all ORM models."""
+
+
+# Diagnostic startup log — logs driver type and URL source without exposing credentials.
+_driver = settings.DATABASE_URL.split("://", 1)[0] if "://" in settings.DATABASE_URL else "unknown"
+_host = ""
+try:
+    from urllib.parse import urlsplit
+    parts = urlsplit(settings.DATABASE_URL)
+    _host = parts.hostname or ""
+    _port = parts.port or ""
+except Exception:
+    pass
+logging.getLogger("app.core.database").warning(
+    "DB diag: driver=%s host=%s port=%s is_sqlite=%s",
+    _driver, _host, _port, settings.is_sqlite,
+)
+
+# SQLite uses NullPool, which rejects the queue-pool sizing arguments.
+_pool_sizing = {} if settings.is_sqlite else {
+    "pool_size": settings.DB_POOL_SIZE,
+    "max_overflow": settings.DB_MAX_OVERFLOW,
+    "pool_timeout": settings.DB_POOL_TIMEOUT,
+    "pool_recycle": 1800,
+    "pool_pre_ping": True,
+    "connect_args": {
+        "timeout": 10,  # connect timeout
+        "command_timeout": settings.DB_STATEMENT_TIMEOUT_SECONDS,
+        "server_settings": {
+            "statement_timeout": str(settings.DB_STATEMENT_TIMEOUT_SECONDS * 1000),
+            # A crashed request must not leave a row lock held forever.
+            "idle_in_transaction_session_timeout": "30000",
+        },
+    },
+}
+
+engine = create_async_engine(
+    settings.DATABASE_URL,
+    echo=settings.DEBUG and not settings.is_sqlite,
+    **_pool_sizing,
+)
+
+async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """FastAPI dependency — yields a scoped async session."""
+    async with async_session() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise

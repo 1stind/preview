@@ -1,0 +1,24 @@
+<header class="site-header" x-data="{ open: false }" @keydown.escape.window="open = false">
+  <div class="relative flex items-center gap-1 rounded-full border border-gray-200/70 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.04] backdrop-blur-xl px-1.5 py-1.5 shadow-lg shadow-gray-900/[0.06] dark:shadow-black/30">
+    <a href="/" class="brand-lockup" aria-label="Raja Voting Digital, beranda">
+      <img src="/static/img/rv.png?v={{ tailwind_css_version | default("preview", true) }}" width="40" height="40" alt="">
+      <span>Raja Voting<span class="brand-subtitle">Digital voting platform</span></span>
+    </a>
+    <nav class="desktop-nav" aria-label="Navigasi utama">
+      <a href="/" {% if request.url.path == '/' %}aria-current="page"{% endif %}>Beranda</a>
+      <a href="/events" {% if request.url.path.startswith('/events') %}aria-current="page"{% endif %}>Jelajahi event</a>
+      <a href="/leaderboard" {% if request.url.path == '/leaderboard' %}aria-current="page"{% endif %}>Peringkat</a>
+    </nav>
+    <a href="/admin/login" class="organizer-link">Masuk panitia</a>
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode" aria-checked="false">
+      <span class="theme-toggle-icon" aria-hidden="true">🌙</span>
+    </button>
+    <button type="button" class="btn btn-secondary mobile-menu-button" @click="open = !open" :aria-expanded="open" aria-controls="mobile-navigation" x-text="open ? 'Tutup' : 'Menu'">Menu</button>
+  </div>
+  <nav id="mobile-navigation" class="mobile-nav" aria-label="Navigasi seluler" x-show="open" x-cloak>
+    <a href="/" {% if request.url.path == '/' %}aria-current="page"{% endif %}>Beranda</a>
+    <a href="/events" {% if request.url.path.startswith('/events') %}aria-current="page"{% endif %}>Jelajahi event</a>
+    <a href="/leaderboard" {% if request.url.path == '/leaderboard' %}aria-current="page"{% endif %}>Peringkat</a>
+    <a href="/admin/login">Masuk panitia</a>
+  </nav>
+</header>

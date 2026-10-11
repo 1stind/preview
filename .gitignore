@@ -1,0 +1,18 @@
+node_modules
+/package.json
+/package-lock.json
+pnpm-lock.yaml
+bun.lock
+yarn.lock
+agent-manager.json
+.kilo/
+.sixth/
+.vscode/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.db
+.env
+.venv/
+# Built by scripts/build_css.sh at deploy time
+app/static/css/tailwind.css
